@@ -23,6 +23,8 @@ Meta's model LLAMA2 can be [fine tuned](https://github.com/facebookresearch/llam
 and even [trained on custom data](https://github.com/facebookresearch/llama-recipes/blob/main/docs/Dataset.md#training-on-custom-data
 ).
 
+Example of finetuning [youtube video](https://www.google.com/search?q=llama+2+can+be+fine+tuned&oq=llama+2+can+be+fine+tuned&gs_lcrp=EgZjaHJvbWUyCQgAEEUYORigATIHCAEQIRirAjIHCAIQIRirAjIHCAMQIRirAjIKCAQQIRgWGB0YHjIKCAUQIRgWGB0YHjIKCAYQIRgWGB0YHjIKCAcQIRgWGB0YHjIKCAgQIRgWGB0YHjIKCAkQIRgWGB0YHtIBCTE1NjgxajBqN6gCALACAA&sourceid=chrome&ie=UTF-8#fpstate=ive&vld=cid:06d14bea,vid:74NSDMvYZ9Y,st:0)
+
 
 OpenAI has an UI to create a GPT for your particular needs 
 
