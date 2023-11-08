@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Completions</title>
+    <style>
+        #response {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Completions</h1>
+    
+    <textarea id="inputJSON" rows="5" cols="50">
+{
+  "model": "luna-ai-llama2",
+  "messages": [{"role": "user", "content": ""}],
+  "temperature": 0.9
+}
+    </textarea>
+    
+    <br>
+    <button onclick="sendRequest()">Send Request</button>
+    
+    <h2>Response:</h2>
+    <pre id="response"></pre>
+    
+    <script>
+        function sendRequest() {
+            var inputJSON = document.getElementById("inputJSON").value;
+
+            fetch('http://localhost:8080/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: inputJSON
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the response in a nice format
+                document.getElementById("response").textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById("response").textContent = 'Error: ' + error;
+            });
+        }
+    </script>
+</body>
+</html>
+
