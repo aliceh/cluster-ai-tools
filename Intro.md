@@ -7,7 +7,9 @@ AI is already used with kubernetes
 
 [k8sgpt](https://k8sgpt.ai/) is a tool for scanning your kubernetes clusters, diagnosing and triaging issues in simple english. It has SRE experience codified into its analyzers and helps to pull out the most relevant information to enrich it with AI.
 
-Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit[KubeCon 2023 talk]](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op[…]h-maurice-amit-k-intuit?iframe=no&w=100%&sidebar=yes&bg=no)
+Another AI application presented on KubeCon 2023
+
+Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit [KubeCon 2023 talk]](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op)
 
 ### Some popular AI models
 
