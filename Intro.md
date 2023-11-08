@@ -1,12 +1,13 @@
 
 # How can AI help us to be more productive in our daily tasks?
 
-AI is already used used with kubernetes 
+AI models, like GPT4, can be trained on data to pass standardazid tests of any kind with very good results, such as BAR exam and AP exams https://openai.com/research/gpt-4
 
-[k8sgpt is a tool for scanning your kubernetes clusters, diagnosing and triaging issues in simple english. It has SRE experience codified into its analyzers and helps to pull out the most relevant information to enrich it with AI.](https://k8sgpt.ai/)
+AI is already used with kubernetes 
 
-[Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit]
- (https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op[…]h-maurice-amit-k-intuit?iframe=no&w=100%&sidebar=yes&bg=no)
+[k8sgpt](https://k8sgpt.ai/) is a tool for scanning your kubernetes clusters, diagnosing and triaging issues in simple english. It has SRE experience codified into its analyzers and helps to pull out the most relevant information to enrich it with AI.
+
+Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit[KubeCon 2023 talk]](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op[…]h-maurice-amit-k-intuit?iframe=no&w=100%&sidebar=yes&bg=no)
 
 ### Some popular AI models
 
@@ -16,10 +17,10 @@ Many models are shared in the community https://huggingface.co/
 
 ### Can you create a custom model?
 
-Meta's model LLAMA2 can be fine tuned now for customer's needs
-And even trained on custom data:
+Meta's model LLAMA2 can be [fine tuned](https://github.com/facebookresearch/llama-recipes/blob/main/README.md) now for customer's needs
+and even [trained on custom data](https://github.com/facebookresearch/llama-recipes/blob/main/docs/Dataset.md#training-on-custom-data
+).
 
-https://github.com/facebookresearch/llama-recipes/blob/main/docs/Dataset.md#training-on-custom-data
 
 OpenAI has an UI to create a GPT for your particular needs 
 
