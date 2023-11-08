@@ -7,7 +7,9 @@ AI is already used with kubernetes
 
 [k8sgpt](https://k8sgpt.ai/) is a tool for scanning your kubernetes clusters, diagnosing and triaging issues in simple english. It has SRE experience codified into its analyzers and helps to pull out the most relevant information to enrich it with AI.
 
-Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit[KubeCon 2023 talk]](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op[…]h-maurice-amit-k-intuit?iframe=no&w=100%&sidebar=yes&bg=no)
+Another AI application presented on KubeCon 2023
+
+Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit [KubeCon 2023 talk]](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op)
 
 ### Some popular AI models
 
@@ -20,6 +22,8 @@ Many models are shared in the community https://huggingface.co/
 Meta's model LLAMA2 can be [fine tuned](https://github.com/facebookresearch/llama-recipes/blob/main/README.md) now for customer's needs
 and even [trained on custom data](https://github.com/facebookresearch/llama-recipes/blob/main/docs/Dataset.md#training-on-custom-data
 ).
+
+Example of finetuning [youtube video](https://www.google.com/search?q=llama+2+can+be+fine+tuned&oq=llama+2+can+be+fine+tuned&gs_lcrp=EgZjaHJvbWUyCQgAEEUYORigATIHCAEQIRirAjIHCAIQIRirAjIHCAMQIRirAjIKCAQQIRgWGB0YHjIKCAUQIRgWGB0YHjIKCAYQIRgWGB0YHjIKCAcQIRgWGB0YHjIKCAgQIRgWGB0YHjIKCAkQIRgWGB0YHtIBCTE1NjgxajBqN6gCALACAA&sourceid=chrome&ie=UTF-8#fpstate=ive&vld=cid:06d14bea,vid:74NSDMvYZ9Y,st:0)
 
 
 OpenAI has an UI to create a GPT for your particular needs 
