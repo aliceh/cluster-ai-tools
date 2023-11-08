@@ -1,13 +1,20 @@
 
 # How can AI help us to be more productive in our daily tasks?
 
+AI is already used used with kubernetes 
 
+[k8sgpt is a tool for scanning your kubernetes clusters, diagnosing and triaging issues in simple english. It has SRE experience codified into its analyzers and helps to pull out the most relevant information to enrich it with AI.](https://k8sgpt.ai/)
+
+[Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit]
+ (https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op[…]h-maurice-amit-k-intuit?iframe=no&w=100%&sidebar=yes&bg=no)
 
 ### Some popular AI models
 
 https://www.simform.com/blog/open-source-llm/
 
 Many models are shared in the community https://huggingface.co/
+
+### Can you create a custom model?
 
 Meta's model LLAMA2 can be fine tuned now for customer's needs
 And even trained on custom data:
@@ -19,6 +26,7 @@ OpenAI has an UI to create a GPT for your particular needs
 
 AWS Sage Maker - to train, fine tune your model
 
+### Can LLM be immediately useful for us?
 
 Experiment 
 
@@ -38,7 +46,7 @@ These are unique identifiers for the specific requests that resulted in the erro
 In summary, the errors you're seeing are due to a limitation in the number of security group rules that can be applied to your load balancers. To resolve this issue, you may need to review and optimize the existing security group rules, or consider splitting your resources into multiple security groups to avoid hitting this rule limit. Additionally, you may need to check your cloud provider's documentation or contact their support for guidance on how to work around or increase the rule limit if that is possible.
 
 
-Usecase ideas:
+### Usecase ideas
 
 - Train LLM on our documentation, and use it to address ustomer questions
 - Train LLM on our errors 
