@@ -9,7 +9,7 @@ AI is already used with kubernetes
 
 Another AI application presented on KubeCon 2023
 
-Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit [KubeCon 2023 talk]](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op)
+Improving MTTR by 80% Through GenAI-Powered Operational Data Platform at Intuit - Vigith Maurice & Amit K, Intuit [KubeCon 2023 talk](https://kccncna2023.sched.com/event/1R2sH/improving-mttr-by-80-through-genai-powered-op)
 
 ### Some popular AI models
 
@@ -34,7 +34,7 @@ AWS Sage Maker - to train, fine tune your model
 ### Can LLM be immediately useful for us?
 
 Experiment 
-
+`
 Q: "Explain this error: 2023-11-03 20:02:42 +0000 UTC hostedclusters rosa-lcjp7 router load balancer is not provisioned: (combined from similar events): Error syncing load balancer: failed to ensure load balancer: error authorizing security group ingress: "RulesPerSecurityGroupLimitExceeded: The maximum number of rules per security group has been reached."
 
 A: The errors you've provided are related to a problem with setting up or managing load balancers in a cloud environment. Specifically, it appears to be an issue with the maximum number of security group rules that can be configured for the associated load balancers. Let's break down the error message:
@@ -49,7 +49,7 @@ The "status code: 400" indicates that this is an HTTP error response, specifical
 
 These are unique identifiers for the specific requests that resulted in the error. They can be useful for tracking down the specific actions that triggered the problem in your cloud infrastructure.
 In summary, the errors you're seeing are due to a limitation in the number of security group rules that can be applied to your load balancers. To resolve this issue, you may need to review and optimize the existing security group rules, or consider splitting your resources into multiple security groups to avoid hitting this rule limit. Additionally, you may need to check your cloud provider's documentation or contact their support for guidance on how to work around or increase the rule limit if that is possible.
-
+`
 
 ### Usecase ideas
 
