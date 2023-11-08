@@ -56,3 +56,13 @@ In summary, the errors you're seeing are due to a limitation in the number of se
 
 - Train LLM on our documentation, and use it to address ustomer questions
 - Train LLM on our errors 
+
+### Areas to explore 
+
+[AutoGen](https://microsoft.github.io/autogen/docs/Getting-Started/#:~:text=AutoGen%20enables%20building%20next%2Dgen,models%20and%20overcomes%20their%20weaknesses.) is a framework that enables development of LLM applications using multiple agents that can converse with each other to solve tasks. AutoGen agents are customizable, conversable, and seamlessly allow human participation. They can operate in various modes that employ combinations of LLMs, human inputs, and tools.
+
+
+
+[Youtube tutorial](https://www.youtube.com/watch?v=PUPO2tTyPOo)
+
+[Microsoft Researh Blog](https://www.microsoft.com/en-us/research/blog/autogen-enabling-next-generation-large-language-model-applications/)
