@@ -3,7 +3,7 @@
 
 AI models, like GPT4, can be trained on data to pass standardazid tests of any kind with very good results, such as BAR exam and AP exams https://openai.com/research/gpt-4
 
-AI is already used with kubernetes 
+[AI is already used with kubernetes](https://blog.palark.com/chatgpt-tools-for-kubernetes/)
 
 [k8sgpt](https://k8sgpt.ai/) is a tool for scanning your kubernetes clusters, diagnosing and triaging issues in simple english. It has SRE experience codified into its analyzers and helps to pull out the most relevant information to enrich it with AI.
 
