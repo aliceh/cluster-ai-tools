@@ -40,6 +40,13 @@ do
 done
 )
 
+#TODO:
+#Get the script to run the prunejobfix script, maybe we can copy it from /sop/v4/utils
+#Fix the for loop so that it doers not exit after one unsuccessfull serach
+
+#Nice to have: make it check again every 2 minutes
+#Nice to have: run something on KubeNodeUnschedulableSRE and console-ErrorBudgetBurn
+
 echo "$ALL_INCIDENTS"
 
 for incident in "${INCIDENTS[@]}"
@@ -51,8 +58,3 @@ while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $(gum st
 
 done
 
-#echo $ALL_INCIDENTS| jq -rc 'select(.pd.title | contains("PruningCronjobErrorSRE"))' | \
-#while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $pd_id; cluster_id=$(echo "$pd_data" | \
-# jq -rc '.external_id'); echo "External cluster ID: $cluster_id"; ocm backplane session "$cluster_id"; oc get po -n openshift-sre-pruning -o wide;  done 
-
-#echo $ALL_INCIDENTS| jq -rc 'select(.pd.title | contains("KubeNodeUnschedulableSRE"))' | while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $pd_id; cluster_id=$(echo "$pd_data" | jq -rc '.external_id'); echo "External cluster ID: $cluster_id"; ocm backplane session "$cluster_id"; oc logs -n openshift-machine-api deploy/machine-api-controllers -c machine-controller ;  done 
