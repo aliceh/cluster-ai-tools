@@ -1,5 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+
+set -o pipefail
+set -o errexit
+set -o nounset
+
+# This script requires https://github.com/charmbracelet/gum
+command -v /usr/bin/gum >/dev/null 2>&1 \
+  || { echo >&2 "This script requires https://github.com/charmbracelet/gum, but it's not installed.  Aborting."; exit 1; }
+
+# This script requires https://github.com/martindstone/pagerduty-cli
+command -v /usr/local/bin/pd >/dev/null 2>&1 \
+  || { echo >&2 "This script requires https://github.com/martindstone/pagerduty-cli, but it's not installed.  Aborting."; exit 1; }
+
+# Other tools are likely to be installed
+# * oc
+# * ocm
+# * jq
 
 gum style --border normal --margin "1" --padding "1 2" --border-foreground 57 "Hello and welcome to $(gum style --foreground 57 'Copilot')."
 
