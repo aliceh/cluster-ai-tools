@@ -22,8 +22,8 @@ CHOICE=$(gum choose --item.foreground 250 "Yes" "No" "It's complicated")
 
 echo -e "Which alert should I watch today?"
 
-PCE="PruningCronjobErrorSRE"; KNU="KubeNodeUnschedulableSRE"; BOTH="Both"
-ACTIONS=$(gum choose --cursor-prefix "[ ] " --selected-prefix "[✓] " --no-limit "$PCE" "$KNU" "$BOTH")
+PCE="PruningCronjobErrorSRE"; KNU="KubeNodeUnschedulableSRE"; CER="console-ErrorBudgetBurn"
+INCIDENTS=$(gum choose --no-limit "$PCE" "$KNU" "$CER")
 echo "I'll keep that in mind!"
 
 
@@ -42,7 +42,17 @@ done
 
 echo "$ALL_INCIDENTS"
 
+for incident in "${INCIDENTS[@]}"
+do
+   echo $(gum style --foreground 57 "Checking for" $incident) 
+   echo $ALL_INCIDENTS| jq -rc --arg incident "$incident" 'select(.pd.title | contains($incident))' | \
+while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $(gum style --foreground 57 "Found incident" $pd_id "," $incident); cluster_id=$(echo "$pd_data" | \
+ jq -rc '.external_id'); echo "External cluster ID: $cluster_id"; ocm backplane login "$cluster_id"; oc get po -n openshift-sre-pruning -o wide;  done 
 
-echo $ALL_INCIDENTS| jq -rc 'select(.pd.title | contains("KubeNodeUnschedulableSRE"))' | while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $pd_id; cluster_id=$(echo "$pd_data" | jq -rc '.external_id'); echo "External cluster ID: $cluster_id"; ocm backplane session "$cluster_id"; oc get po -n openshift-sre-pruning -o wide;  done 
+done
+
+#echo $ALL_INCIDENTS| jq -rc 'select(.pd.title | contains("PruningCronjobErrorSRE"))' | \
+#while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $pd_id; cluster_id=$(echo "$pd_data" | \
+# jq -rc '.external_id'); echo "External cluster ID: $cluster_id"; ocm backplane session "$cluster_id"; oc get po -n openshift-sre-pruning -o wide;  done 
 
 #echo $ALL_INCIDENTS| jq -rc 'select(.pd.title | contains("KubeNodeUnschedulableSRE"))' | while read pd_data; do pd_id=$(echo "$pd_data" | jq -rc '.pd.id'); echo $pd_id; cluster_id=$(echo "$pd_data" | jq -rc '.external_id'); echo "External cluster ID: $cluster_id"; ocm backplane session "$cluster_id"; oc logs -n openshift-machine-api deploy/machine-api-controllers -c machine-controller ;  done 
