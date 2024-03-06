@@ -5,11 +5,11 @@ set -o errexit
 set -o nounset
 
 # This script requires https://github.com/charmbracelet/gum
-command -v /usr/bin/gum >/dev/null 2>&1 \
+command -v gum >/dev/null 2>&1 \
   || { echo >&2 "This script requires https://github.com/charmbracelet/gum, but it's not installed.  Aborting."; exit 1; }
 
 # This script requires https://github.com/martindstone/pagerduty-cli
-command -v /usr/local/bin/pd >/dev/null 2>&1 \
+command -v pd >/dev/null 2>&1 \
   || { echo >&2 "This script requires https://github.com/martindstone/pagerduty-cli, but it's not installed.  Aborting."; exit 1; }
 
 # Other tools are likely to be installed
@@ -161,7 +161,19 @@ AER="api-ErrorBudgetBurn"
 UPG="UpgradeNodeUpgradeTimeoutSRE"
 CPD="ClusterProvisioningDelay"
 
-mapfile -t ALERTS < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
+#This could be done elegantly with mapfile, but it would break on MacOS because  MacOS has bash 3 and mapfile was introduced in bash 4.
+
+declare -a ALERTS=()
+
+# Run the command and read its output line by line
+while IFS= read -r line; do
+    # Add each line to the ALERTS array
+    ALERTS+=("$line")
+done < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
+
+
+
+
 echo "I'll keep that in mind!"
 
 # TODO:
