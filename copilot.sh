@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash 
 
 set -o pipefail
 set -o errexit
@@ -35,7 +35,14 @@ PruningCronjobErrorSRE() {
   read -r cluster
 
   ocm backplane login $cluster
-  oc get po -n openshift-sre-pruning -o wide
+  oc get po -n openshift-sre-pruning 
+  #ocm backplane managedjob create SREP/retry-failed-pruning-cronjob
+  OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -1)
+  echo $OUTPUT
+  job=$(awk '{print $NF}' <<< $OUTPUT)
+  sleep 3
+  ocm backplane managedjob logs $job
+  oc get po -n openshift-sre-pruning 
 }
 
 ClusterProvisioningDelay() {
@@ -51,11 +58,13 @@ KubeNodeUnschedulableSRE() {
 
   ocm backplane login $cluster
   ocm backplane managedjob create SREP/describe-nodes -p SCRIPT_PARAMETERS="--all"
+  cd ~/ops-sop/v4/utils; ./kube-node-unscheduleable.sh 
 
   oc get no -o wide
 }
 
-console-ErrorBudgetBurn() {
+#console-ErrorBudgetBurn() {
+ClusterMonitoringErrorBudgetBurnSRE() {
   local cluster
   read -r cluster
 
@@ -85,7 +94,6 @@ getAlerts() {
   local on_call="${*}"
   local incidents
   incidents="$(pd incident list --teams='Platform SRE' --assignees="$on_call" --json 2>/dev/null | jq -rc '.[].id')"
-
   # These are useful for testing local data
   # incidents="$(pd incident list --me --json 2>/dev/null | jq -rc '.[].id')"
   # incidents="$(cat /tmp/incidents.json | jq -rc '.[].id')"
@@ -105,6 +113,7 @@ processAlerts() {
   local alerts
   read -r alerts
 
+
   if [[ -z "$alerts" ]]
   then
     return
@@ -112,7 +121,10 @@ processAlerts() {
 
   for x in "${ALERTS[@]}"
   do 
+   
     id=$(jq --arg alertToWatch "${x}" -r '.[] | select(.pd.title | contains($alertToWatch)) | .external_id' <<< $alerts)
+    #Replacing for the test duration 
+    id="0e835c13-cf99-4500-ab29-18012ab5550c"
     if [[ -n "$id" ]]
     then
       # Disable errexit to allow the loop to continue if the individual repair fails
@@ -150,31 +162,34 @@ echo -e "Are you $(gum style --foreground 57 "$on_call") ?"
 CHOICE=$(gum choose --item.foreground 250 "Yes" "No" "It's complicated")
 [[ "$CHOICE" == "Yes" ]] && echo "I thought so." || echo "I'm sorry to hear that." 
 [[ "$CHOICE" == "No" ]] && exit 0
-[[ "$CHOICE" == "It's complicated" ]] && exit 0
+[[ "$CHOICE" == "It's complicated" ]] && echo "It is what it is..."
 
 echo -e "Which alert should I watch today?"
+echo -e $(gum style --foreground 57 "Hit "SPACE" for all the alerts you wish to select.")
 
 PCE="PruningCronjobErrorSRE"
 KNU="KubeNodeUnschedulableSRE"
-CER="console-ErrorBudgetBurn"
+CER="ClusterMonitoringErrorBudgetBurnSRE" #"console-ErrorBudgetBurn"
 AER="api-ErrorBudgetBurn"
 UPG="UpgradeNodeUpgradeTimeoutSRE"
 CPD="ClusterProvisioningDelay"
 
-#This could be done elegantly with mapfile, but it would break on MacOS because  MacOS has bash 3 and mapfile was introduced in bash 4.
-
-declare -a ALERTS=()
-
-# Run the command and read its output line by line
-while IFS= read -r line; do
-    # Add each line to the ALERTS array
-    ALERTS+=("$line")
-done < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
+mapfile -t ALERTS < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
 
 
+echo "Selected options:"
+for alert in "${ALERTS[@]}"; do
+    echo "$alert"
+done
+
+# Check if ALERTS is populated
+if [[ ${#ALERTS[@]} -gt 0 ]]; then
+    echo "Watching ${ALERTS[@]}... I'll keep that in mind!"
+else
+    echo "No alerts selected."
+fi
 
 
-echo "I'll keep that in mind!"
 
 # TODO:
 # Priority - Have to prevent the script from running trying to fix the same alert twice at the same time - maybe a "lockfile" via PD note?
@@ -188,6 +203,6 @@ while true
 do 
   alerts=$(getAlerts "$on_call" | jq -rc --slurp .)
   processAlerts <<< "$alerts"
-  gum spin --spinner dot --title "Waiting for alerts..." -- sleep 30
+  gum spin --spinner dot --title "Waiting for alerts..." -- sleep 120
 done
 
