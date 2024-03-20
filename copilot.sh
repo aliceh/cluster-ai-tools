@@ -51,14 +51,15 @@ ClusterProvisioningDelay() {
   osdctl cluster context $cluster
 }
 
-KubeNodeUnschedulableSRE() {
+  KubeNodeUnschedulableSRE() {
   local cluster
   read -r cluster
 
   ocm backplane login $cluster
-  ocm backplane managedjob create SREP/describe-nodes -p SCRIPT_PARAMETERS="--all"
-
+  ocm backplane context
   oc get no -o wide
+  echo "Running the script for KubeNodeUnschedulableSRE alert"
+  ~/ops-sop/v4/utils/kube-node-unscheduleable.sh
 }
 
 console-ErrorBudgetBurn() {
