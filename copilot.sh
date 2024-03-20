@@ -35,7 +35,13 @@ PruningCronjobErrorSRE() {
   read -r cluster
 
   ocm backplane login $cluster
-  oc get po -n openshift-sre-pruning -o wide
+  oc get po -n openshift-sre-pruning 
+  OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -1)
+  echo $OUTPUT
+  job=$(awk '{print $NF}' <<< $OUTPUT)
+  sleep 3
+  ocm backplane managedjob logs $job
+  oc get po -n openshift-sre-pruning 
 }
 
 ClusterProvisioningDelay() {
