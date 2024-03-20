@@ -36,6 +36,7 @@ PruningCronjobErrorSRE() {
 
   ocm backplane login $cluster
   oc get po -n openshift-sre-pruning 
+  echo "Running the script for PruningCronjobErrorSRE alert"
   OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -1)
   echo $OUTPUT
   job=$(awk '{print $NF}' <<< $OUTPUT)
@@ -56,10 +57,10 @@ KubeNodeUnschedulableSRE() {
   read -r cluster
 
   ocm backplane login $cluster
-  ocm backplane managedjob create SREP/describe-nodes -p SCRIPT_PARAMETERS="--all"
-  cd ~/ops-sop/v4/utils; ./kube-node-unscheduleable.sh 
+  ocm backplane context
+  echo "Running the script for KubeNodeUnschedulableSRE alert"
+  ~/ops-sop/v4/utils/kube-node-unscheduleable.sh
 
-  oc get no -o wide
 }
 
 #console-ErrorBudgetBurn() {
