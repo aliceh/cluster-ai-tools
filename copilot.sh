@@ -36,7 +36,6 @@ PruningCronjobErrorSRE() {
 
   ocm backplane login $cluster
   oc get po -n openshift-sre-pruning 
-  #ocm backplane managedjob create SREP/retry-failed-pruning-cronjob
   OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -1)
   echo $OUTPUT
   job=$(awk '{print $NF}' <<< $OUTPUT)
