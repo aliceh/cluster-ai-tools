@@ -167,18 +167,20 @@ AER="api-ErrorBudgetBurn"
 UPG="UpgradeNodeUpgradeTimeoutSRE"
 CPD="ClusterProvisioningDelay"
 
-#This could be done elegantly with mapfile, but it would break on MacOS because  MacOS has bash 3 and mapfile was introduced in bash 4.
-
-declare -a ALERTS=()
-
-# Run the command and read its output line by line
-while IFS= read -r line; do
-    # Add each line to the ALERTS array
-    ALERTS+=("$line")
-done < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
+mapfile -t ALERTS < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
 
 
+echo "Selected options:"
+for alert in "${ALERTS[@]}"; do
+    echo "$alert"
+done
 
+# Check if ALERTS is populated
+if [[ ${#ALERTS[@]} -gt 0 ]]; then
+    echo "Watching ${ALERTS[@]}... I'll keep that in mind!"
+else
+    echo "No alerts selected."
+fi
 
 echo "I'll keep that in mind!"
 
