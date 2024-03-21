@@ -49,16 +49,24 @@ ClusterProvisioningDelay() {
   read -r cluster
 
   osdctl cluster context $cluster
+  ocm backplane login $cluster
+  cat ~/.config/osdctl
+  echo "Running osdctl cluster cpd --cluster-id $cluster --profile rhcontrol"
+  osdctl cluster cpd --cluster-id $cluster --profile rhcontrol
+  sleep 3
+  echo "...."
+
 }
 
-KubeNodeUnschedulableSRE() {
+  KubeNodeUnschedulableSRE() {
   local cluster
   read -r cluster
 
   ocm backplane login $cluster
-  ocm backplane managedjob create SREP/describe-nodes -p SCRIPT_PARAMETERS="--all"
-
+  ocm backplane context
   oc get no -o wide
+  echo "Running the script for KubeNodeUnschedulableSRE alert"
+  ~/ops-sop/v4/utils/kube-node-unscheduleable.sh
 }
 
 console-ErrorBudgetBurn() {
@@ -67,6 +75,7 @@ console-ErrorBudgetBurn() {
 
   ocm backplane login $cluster
   oc get co
+
 }
 
 api-ErrorBudgetBurn() {
