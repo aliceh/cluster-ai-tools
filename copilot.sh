@@ -49,6 +49,10 @@ ClusterProvisioningDelay() {
   read -r cluster
 
   osdctl cluster context $cluster
+  ocm backplane login $cluster
+  cat ~/.config/osdctl
+  osdctl cluster cpd --cluster-id $cluster --profile rhcontrol
+
 }
 
   KubeNodeUnschedulableSRE() {
@@ -68,6 +72,7 @@ console-ErrorBudgetBurn() {
 
   ocm backplane login $cluster
   oc get co
+
 }
 
 api-ErrorBudgetBurn() {
