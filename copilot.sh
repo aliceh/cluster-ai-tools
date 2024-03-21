@@ -50,6 +50,13 @@ ClusterProvisioningDelay() {
   read -r cluster
 
   osdctl cluster context $cluster
+  ocm backplane login $cluster
+  cat ~/.config/osdctl
+  echo "Running osdctl cluster cpd --cluster-id $cluster --profile rhcontrol"
+  osdctl cluster cpd --cluster-id $cluster --profile rhcontrol
+  sleep 3
+  echo "...."
+
 }
 
 KubeNodeUnschedulableSRE() {
