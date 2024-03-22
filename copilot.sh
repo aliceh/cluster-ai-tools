@@ -1,4 +1,4 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash -xe
 
 set -o pipefail
 set -o errexit
@@ -17,8 +17,30 @@ command -v pd >/dev/null 2>&1 \
 # * ocm
 # * jq
 
+#"#f14e32"
+red(){
+ text=$1
+ gum style --foreground 1 "$text"
+}
+
+purple(){
+  text=$1
+  gum style --foreground 57 "$text"
+}
+
+#"#267683"
+blue(){
+  text=$1
+  gum style --foreground 4 "$text"
+}
+
+green(){
+  text=$1
+  gum style --foreground 2 "$text"
+}
+
 beginningRepairMsg() {
-  echo "Beginning to repair $1 on $2"
+  echo $(green "Beginning to repair") $(purple $1) $(green "on") $(blue $2)
 }
 
 # Alert handler functions
@@ -26,19 +48,19 @@ UpgradeNodeUpgradeTimeoutSRE() {
   local cluster
   read -r cluster
 
-  echo "Checking if the cluster is a management cluster or service cluster"
+  echo $(blue "Checking if the cluster is a management cluster or service cluster")
   ocm get /api/osd_fleet_mgmt/v1/management_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")'
   ocm get /api/osd_fleet_mgmt/v1/service_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")' 
   
   ocm backplane login $cluster
-  echo "Checking MUO"
+  echo $(blue "Checking MUO")
   oc get upgrade -n openshift-managed-upgrade-operator
   
-  echo "Checking nodes"
+  echo $(blue "Checking nodes")
   oc get no -o wide | grep SchedulingDisabled
   sleep 3
 
-  echo "Checking MCP"
+  echo $(blue "Checking MCP")
   oc get mcp
   sleep 3
 
@@ -52,9 +74,9 @@ PruningCronjobErrorSRE() {
 
   ocm backplane login $cluster
   oc get po -n openshift-sre-pruning 
-  echo "Running the script for PruningCronjobErrorSRE alert"
-  OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -1)
-  echo $OUTPUT
+  echo $(blue "Running the script for PruningCronjobErrorSRE alert")
+  OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -2)
+  echo $(blue "Outputting the script's log")
   job=$(awk '{print $NF}' <<< $OUTPUT)
   sleep 3
   ocm backplane managedjob logs $job
@@ -68,7 +90,7 @@ ClusterProvisioningDelay() {
   osdctl cluster context $cluster
   ocm backplane login $cluster
   cat ~/.config/osdctl
-  echo "Running osdctl cluster cpd --cluster-id $cluster --profile rhcontrol"
+  echo $(blue "Running osdctl cluster cpd --cluster-id $cluster --profile rhcontrol")
   osdctl cluster cpd --cluster-id $cluster --profile rhcontrol
   sleep 3
   echo "...."
@@ -81,7 +103,7 @@ KubeNodeUnschedulableSRE() {
 
   ocm backplane login $cluster
   ocm backplane context
-  echo "Running the script for KubeNodeUnschedulableSRE alert"
+  echo $(blue "Running the script for KubeNodeUnschedulableSRE alert")
   ~/ops-sop/v4/utils/kube-node-unscheduleable.sh
 
 }
@@ -103,6 +125,7 @@ api-ErrorBudgetBurn() {
   oc get co
 }
 
+
 # getAlerts retrieves a list of incidents assigned to the $on_call engineer and returns JSON lists of the alerts for the incident
 getAlerts() {
   # Retrieve incidents and return their alerts in the format:
@@ -116,7 +139,8 @@ getAlerts() {
   #  }
   local on_call="${*}"
   local incidents
-  incidents="$(pd incident list --teams='Platform SRE' --assignees="$on_call" --json 2>/dev/null | jq -rc '.[].id')"
+  #replace the SilentTest user --assignees="P8QS6CC"
+  incidents="$(pd incident list --teams='Platform SRE'  --json 2>/dev/null | jq -rc '.[].id')"
   # These are useful for testing local data
   # incidents="$(pd incident list --me --json 2>/dev/null | jq -rc '.[].id')"
   # incidents="$(cat /tmp/incidents.json | jq -rc '.[].id')"
@@ -135,7 +159,7 @@ getAlerts() {
 processAlerts() {
   local alerts
   read -r alerts
-
+  echo $(red "Found alerts" $alerts)
 
   if [[ -z "$alerts" ]]
   then
@@ -145,23 +169,42 @@ processAlerts() {
   for x in "${ALERTS[@]}"
   do 
    
-    id=$(jq --arg alertToWatch "${x}" -r '.[] | select(.pd.title | contains($alertToWatch)) | .external_id' <<< $alerts)
-    #Replacing for the test duration 
-    id="0e835c13-cf99-4500-ab29-18012ab5550c"
-    if [[ -n "$id" ]]
-    then
-      # Disable errexit to allow the loop to continue if the individual repair fails
-      beginningRepairMsg "$x" "$id"
-      set +o errexit
-      $x <<< "$id"
-      set -o errexit
-    fi
+    # id=$(jq --arg alertToWatch "${x}" -r '.[] | select(.pd.title | contains($alertToWatch)) | .external_id' <<< $alerts)
+    pd_id=$(jq --arg alertToWatch "${x}" -r '.[] | select(.pd.title | contains($alertToWatch)) | "{.external_id,: .pd.id}"' <<< $alerts)
+
+    for y in pd_id
+    do 
+      cluster_id = $(jq .external_id)
+      alert_id = $(jq alertid)
+      
+      #Replacing for the test duration 
+      #id="0e835c13-cf99-4500-ab29-18012ab5550c"
+      if [[ -n "$id" ]]
+      #check if not repaired alert ID is not in array
+      then
+        for i in "${PROCESSED_ALERTS[@]}"
+        if [ "$i" -nq "$alert_id" ]
+          then
+          # We realize this only works while copilot.sh is running, but this is a POC
+          PROCESSED_ALERTS+=($alert_id)
+          # Disable errexit to allow the loop to continue if the individual repair fails
+          beginningRepairMsg "$x" "$cluster_id"
+          # check if we tried to repair before
+          set +o errexit
+          $x <<< "$cluster_id"
+          set -o errexit
+        fi
+      fi
+
+      echo "Fixed alert id $(jq --arg externalid "${id}" -r .id[.external_id])"
+
+    done
   done
   
 }
 
 ### This is the start of the main process
-gum style --border normal --margin "1" --padding "1 2" --border-foreground 57 "Hello and welcome to $(gum style --foreground 57 'Copilot')."
+gum style --border normal --margin "1" --padding "1 2" --border-foreground 57 "Hello and welcome to $(red 'Copilot')."
 
 on_call=$(
   pd schedule oncall -n '0-SREP: Weekday Primary' --json 2>/dev/null | \
@@ -175,12 +218,12 @@ on_call=$(
 # This would be covered by set -x errexit & nounset, but it's nice to be explicit
 if [[ -z "$on_call" ]]
 then
-  echo "ERROR: could not retrieve on-call information. Exiting."
+  echo $(red "ERROR: could not retrieve on-call information. Exiting.")
   exit 1
 fi
 
-echo -e "I can see that $(gum style --foreground 57 "$on_call") is Primary on call."
-echo -e "Are you $(gum style --foreground 57 "$on_call") ?"
+echo -e "I can see that $(green "$on_call") is Primary on call."
+echo -e "Are you $(green "$on_call") ?"
 
 CHOICE=$(gum choose --item.foreground 250 "Yes" "No" "It's complicated")
 [[ "$CHOICE" == "Yes" ]] && echo "I thought so." || echo "I'm sorry to hear that." 
@@ -188,7 +231,7 @@ CHOICE=$(gum choose --item.foreground 250 "Yes" "No" "It's complicated")
 [[ "$CHOICE" == "It's complicated" ]] && echo "It is what it is..."
 
 echo -e "Which alert should I watch today?"
-echo -e $(gum style --foreground 57 "Hit "SPACE" for all the alerts you wish to select.")
+echo -e $(green "Hit") $(blue "SPACE" ) $(green "for all the alerts you wish to select.")
 
 PCE="PruningCronjobErrorSRE"
 KNU="KubeNodeUnschedulableSRE"
@@ -222,9 +265,12 @@ fi
 # Trap SIGINT and SIGTERM to exit gracefully from the while loop if the user wants to exit
 trap exit SIGINT SIGTERM
 
+PROCESSED_ALERTS = ()
+
 while true
 do 
   alerts=$(getAlerts "$on_call" | jq -rc --slurp .)
+  for alert in 
   processAlerts <<< "$alerts"
   gum spin --spinner dot --title "Waiting for alerts..." -- sleep 120
 done
