@@ -26,9 +26,25 @@ UpgradeNodeUpgradeTimeoutSRE() {
   local cluster
   read -r cluster
 
+  echo "Checking if the cluster is a management cluster or service cluster"
+  ocm get /api/osd_fleet_mgmt/v1/management_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")'
+  ocm get /api/osd_fleet_mgmt/v1/service_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")' 
+  
   ocm backplane login $cluster
+  echo "Checking MUO"
   oc get upgrade -n openshift-managed-upgrade-operator
+  
+  echo "Checking nodes"
+  oc get no -o wide | grep SchedulingDisabled
+  sleep 3
+
+  echo "Checking MCP"
+  oc get mcp
+  sleep 3
+
+  #TODO: drain node, check pdb, Special case - Twistlock, Special case - rpm-ostreed timeout
 }
+
 
 PruningCronjobErrorSRE() {
   local cluster
