@@ -1,7 +1,7 @@
 #!/usr/bin/env bash -xe
 
 set -o pipefail
-set -o errexit
+set -o errexitczach
 set -o nounset
 
 # This script requires https://github.com/charmbracelet/gum
@@ -48,10 +48,6 @@ UpgradeNodeUpgradeTimeoutSRE() {
   local cluster
   read -r cluster
 
-  echo $(blue "Checking if the cluster is a management cluster or service cluster")
-  ocm get /api/osd_fleet_mgmt/v1/management_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")'
-  ocm get /api/osd_fleet_mgmt/v1/service_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")' 
-  
   ocm backplane login $cluster
   echo $(blue "Checking MUO")
   oc get upgrade -n openshift-managed-upgrade-operator
