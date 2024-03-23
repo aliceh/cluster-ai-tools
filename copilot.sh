@@ -4,222 +4,149 @@ set -o pipefail
 set -o errexit
 set -o nounset
 
-# This script requires https://github.com/charmbracelet/gum
-command -v gum >/dev/null 2>&1 \
-  || { echo >&2 "This script requires https://github.com/charmbracelet/gum, but it's not installed.  Aborting."; exit 1; }
+source lib/styles
+source lib/alertHandlers
+source lib/pagerDuty
 
-# This script requires https://github.com/martindstone/pagerduty-cli
-command -v pd >/dev/null 2>&1 \
-  || { echo >&2 "This script requires https://github.com/martindstone/pagerduty-cli, but it's not installed.  Aborting."; exit 1; }
-
-# Other tools are likely to be installed
-# * oc
-# * ocm
-# * jq
-
-beginningRepairMsg() {
-  echo "Beginning to repair $1 on $2"
+# checkEnvironment tests for the presence of required tools
+checkEnvironment() {
+    # This script requires https://github.com/charmbracelet/gum
+    command -v gum >/dev/null 2>&1 \
+      || { echo >&2 "This script requires https://github.com/charmbracelet/gum, but it's not installed.  Aborting."; exit 1; }
+    
+    # This script requires https://github.com/martindstone/pagerduty-cli
+    command -v pd >/dev/null 2>&1 \
+      || { echo >&2 "This script requires https://github.com/martindstone/pagerduty-cli, but it's not installed.  Aborting."; exit 1; }
+    
+    # Other tools are likely to be installed
+    # * oc
+    # * ocm
+    # * jq
 }
 
-# Alert handler functions
-UpgradeNodeUpgradeTimeoutSRE() {
-  local cluster
-  read -r cluster
+# checkOnCall prompts the user to confirm that the on-call engineer is the person running the script
+checkOnCall() {
+  local on_call="${1}"
 
-  echo "Checking if the cluster is a management cluster or service cluster"
-  ocm get /api/osd_fleet_mgmt/v1/management_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")'
-  ocm get /api/osd_fleet_mgmt/v1/service_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")' 
-  
-  ocm backplane login $cluster
-  echo "Checking MUO"
-  oc get upgrade -n openshift-managed-upgrade-operator
-  
-  echo "Checking nodes"
-  oc get no -o wide | grep SchedulingDisabled
-  sleep 3
-
-  echo "Checking MCP"
-  oc get mcp
-  sleep 3
-
-  #TODO: drain node, check pdb, Special case - Twistlock, Special case - rpm-ostreed timeout
-}
-
-PruningCronjobErrorSRE() {
-  local cluster
-  read -r cluster
-
-  ocm backplane login $cluster
-  oc get po -n openshift-sre-pruning 
-  OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -1)
-  echo $OUTPUT
-  job=$(awk '{print $NF}' <<< $OUTPUT)
-  sleep 3
-  ocm backplane managedjob logs $job
-  oc get po -n openshift-sre-pruning 
-}
-
-ClusterProvisioningDelay() {
-  local cluster
-  read -r cluster
-
-  osdctl cluster context $cluster
-  ocm backplane login $cluster
-  cat ~/.config/osdctl
-  echo "Running osdctl cluster cpd --cluster-id $cluster --profile rhcontrol"
-  osdctl cluster cpd --cluster-id $cluster --profile rhcontrol
-  sleep 3
-  echo "...."
-
-}
-
-  KubeNodeUnschedulableSRE() {
-  local cluster
-  read -r cluster
-
-  ocm backplane login $cluster
-  ocm backplane context
-  oc get no -o wide
-  echo "Running the script for KubeNodeUnschedulableSRE alert"
-  ~/ops-sop/v4/utils/kube-node-unscheduleable.sh
-}
-
-console-ErrorBudgetBurn() {
-  local cluster
-  read -r cluster
-
-  ocm backplane login $cluster
-  oc get co
-
-}
-
-api-ErrorBudgetBurn() {
-  local cluster
-  read -r cluster
-
-  ocm backplane login $cluster
-  oc get co
-}
-
-# getAlerts retrieves a list of incidents assigned to the $on_call engineer and returns JSON lists of the alerts for the incident
-getAlerts() {
-  # Retrieve incidents and return their alerts in the format:
-  #
-  # {
-  #    "external_id":"cluster_UID",
-  #    "pd":{
-  #      "id":"pd_alert_id",
-  #      "title": "pd_alert_title"
-  #    }
-  #  }
-  local on_call="${*}"
-  local incidents
-  incidents="$(pd incident list --teams='Platform SRE' --assignees="$on_call" --json 2>/dev/null | jq -rc '.[].id')"
-
-  # These are useful for testing local data
-  # incidents="$(pd incident list --me --json 2>/dev/null | jq -rc '.[].id')"
-  # incidents="$(cat /tmp/incidents.json | jq -rc '.[].id')"
-
-  for incident in $incidents
-  do 
-    # Select the !ALERT! id for use here; since an incident can have multiple alerts
-    # and we fix alerts, not incidents
-    pd incident alerts -i "${incident}" --json 2>/dev/null| \
-      jq -cj '.[] | "{\"external_id\": \"\(.body.details.cluster_id)\", \"pd\": {\"id\": \"\(.id)\", \"title\": \"\(.summary)\"}}"'
-  done
-}
-
-# processAlerts accepts output from getAlerts as stdin and checks the alert to see if it is one of the "watched" alerts
-# If so, it executes the function with that alert name, passing the cluster id as stdin
-processAlerts() {
-  local alerts
-  read -r alerts
-
-  if [[ -z "$alerts" ]]
+  # This would be covered by set -x errexit & nounset, but it's nice to be explicit
+  if [[ -z "$on_call" ]]
   then
-    return
+    echo $(red "ERROR: could not retrieve on-call information. Exiting.")
+    exit 1
   fi
 
-  for x in "${ALERTS[@]}"
-  do 
-    id=$(jq --arg alertToWatch "${x}" -r '.[] | select(.pd.title | contains($alertToWatch)) | .external_id' <<< $alerts)
-    if [[ -n "$id" ]]
-    then
-      # Disable errexit to allow the loop to continue if the individual repair fails
-      beginningRepairMsg "$x" "$id"
-      set +o errexit
-      $x <<< "$id"
-      set -o errexit
-    fi
-  done
-  
+  echo -e "I can see that $(green "$on_call") is Primary on call."
+  echo -e "Are you $(green "$on_call") ?"
+
+  CHOICE=$(gum choose --item.foreground 250 "Yes" "No" "It's complicated")
+  [[ "$CHOICE" == "Yes" ]] && echo "I thought so." || echo "I'm sorry to hear that." 
+  [[ "$CHOICE" == "No" ]] && exit 0
+  [[ "$CHOICE" == "It's complicated" ]] && echo "It is what it is..."
 }
 
-### This is the start of the main process
-gum style --border normal --margin "1" --padding "1 2" --border-foreground 57 "Hello and welcome to $(gum style --foreground 57 'Copilot')."
 
-on_call=$(
-  pd schedule oncall -n '0-SREP: Weekday Primary' --json 2>/dev/null | \
-  jq -rc '.[0].user.summary' || \
+main() {
+  local dryRun="FALSE"
 
-  pd schedule oncall -n '0-SREP: Weekend Oncall 4x6' --json 2>/dev/null | \
-  jq -rc '.[0].user.summary'
-)
+  OPTS="i:d"
 
-# If we can't find the on-call person, we should exit
-# This would be covered by set -x errexit & nounset, but it's nice to be explicit
-if [[ -z "$on_call" ]]
-then
-  echo "ERROR: could not retrieve on-call information. Exiting."
-  exit 1
-fi
+  while getopts $OPTS opt; do
+    case ${opt} in
+      d )
+        dryRun="TRUE"
+        echo "### Dry Run ###"
+        ;;
+      i )
+        incidentFile="${OPTARG}"
+        echo "Using incident file $incidentFile"
+        ;; 
+      \?)
+        echo "Usage: copilot.sh [-d]"
+        exit 1
+        ;;
+    esac
+  done
 
-echo -e "I can see that $(gum style --foreground 57 "$on_call") is Primary on call."
-echo -e "Are you $(gum style --foreground 57 "$on_call") ?"
+  checkEnvironment
 
-CHOICE=$(gum choose --item.foreground 250 "Yes" "No" "It's complicated")
-[[ "$CHOICE" == "Yes" ]] && echo "I thought so." || echo "I'm sorry to hear that." 
-[[ "$CHOICE" == "No" ]] && exit 0
-[[ "$CHOICE" == "It's complicated" ]] && exit 0
+  gum style --border normal --margin "1" --padding "1 2" --border-foreground 57 "Hello and welcome to $(red 'Copilot')."
 
-echo -e "Which alert should I watch today?"
+  # Get On-Call Engineer
+  if [[ "${dryRun}_x" == "FALSE_x" ]] 
+  then
+    # (lib/pagerDuty/pagerDutyOnCall)
+    on_call=$(pagerDutyOnCall)
+    checkOnCall $on_call
+  fi
 
-PCE="PruningCronjobErrorSRE"
-KNU="KubeNodeUnschedulableSRE"
-CER="console-ErrorBudgetBurn"
-AER="api-ErrorBudgetBurn"
-UPG="UpgradeNodeUpgradeTimeoutSRE"
-CPD="ClusterProvisioningDelay"
+  # Prompt for which alerts to watch (lib/alertHandlers/alertsToWatch)
+  echo -e "Which alert should I watch today?"
+  echo -e $(green "Hit") $(blue "SPACE" ) $(green "for all the alerts you wish to select.")
+  declare -a ALERTS
+  readarray -t ALERTS < <(alertsToWatch $dryRun)
 
-mapfile -t ALERTS < <(gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD")
+  if [[ ${#ALERTS[@]} -gt 0 ]]; then
+      echo "Watching ${ALERTS[*]}... I'll keep that in mind!"
+  else
+      echo "No alerts selected."
+      exit 1
+  fi
 
+  # PROCESSED_ALERT_IDS keeps track of which alerts have been acted on
+  # This is just for the POC; in a real life situation, we need something more durable
+  declare -a PROCESSED_ALERT_IDS
 
-echo "Selected options:"
-for alert in "${ALERTS[@]}"; do
-    echo "$alert"
-done
+  # Trap SIGINT and SIGTERM to exit gracefully from the while loop if the user wants to exit
+  trap exit SIGINT SIGTERM
 
-# Check if ALERTS is populated
-if [[ ${#ALERTS[@]} -gt 0 ]]; then
-    echo "Watching ${ALERTS[@]}... I'll keep that in mind!"
-else
-    echo "No alerts selected."
-fi
+  while true
+  do 
+    declare -a incidents
+    if [[ "${dryRun}_x" == "FALSE_x" ]]
+    then
+      # Parse the raw PagerDuty JSON array to a bash array
+      readarray -t incidents < <(pagerDutyGetIncidents "${on_call}" | jq -c '.[]')
+    else
+      readarray -t incidents < <(jq -c '.[]' "${incidentFile}")
+    fi
 
-echo "I'll keep that in mind!"
+    declare -a alerts_to_remediate
+    for incident in "${incidents[@]}"
+    do
+      local incident_id
+      incident_id=$(jq -r .id <<< "$incident")
 
-# TODO:
-# Priority - Have to prevent the script from running trying to fix the same alert twice at the same time - maybe a "lockfile" via PD note?
-# Get the script to run the prunejobfix script, maybe we can copy it from /sop/v4/utils
-# Nice to have: run something on KubeNodeUnschedulableSRE and console-ErrorBudgetBurn
+      declare -a raw_alerts
+      readarray -t raw_alerts < <(pagerDutyGetAlertsFromIncident "$incident_id" | jq -c '.[]')
 
-# Trap SIGINT and SIGTERM to exit gracefully from the while loop if the user wants to exit
-trap exit SIGINT SIGTERM
+      for raw_alert in "${raw_alerts[@]}"
+      do
+        declare -a alert_summaries
+        readarray -t alert_summaries < <(summarizeAlertDetailsFromAlert "$raw_alert")
+        alerts_to_remediate+=("${alert_summaries[@]}")
+      done
+    done
 
-while true
-do 
-  alerts=$(getAlerts "$on_call" | jq -rc --slurp .)
-  processAlerts <<< "$alerts"
-  gum spin --spinner dot --title "Waiting for alerts..." -- sleep 30
-done
+    for alert in "${alerts_to_remediate[@]}"
+    do
+      pd_id=$(jq -r .pd.id <<< "$alert")
+      for processed_alert in "${PROCESSED_ALERT_IDS[@]}"
+      do
+        if [[ "${pd_id}" == "${processed_alert}" ]]
+        then
+          # The alert has already been processed; break
+          break
+        fi
+      done
 
+      # Else handle the alert
+      PROCESSED_ALERT_IDS+=("$pd_id")
+      processAlert "$alert" "$dryRun"
+    done
+
+    gum spin --spinner dot --title "Waiting for alerts..." -- sleep 120
+  done
+
+}
+
+main "$@"

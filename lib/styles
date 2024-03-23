@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+#"#f14e32"
+
+red(){
+ text=$1
+ gum style --foreground 1 "$text"
+}
+
+purple(){
+  text=$1
+  gum style --foreground 57 "$text"
+}
+
+#"#267683"
+blue(){
+  text=$1
+  gum style --foreground 4 "$text"
+}
+
+green(){
+  text=$1
+  gum style --foreground 2 "$text"
+}

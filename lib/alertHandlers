@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+
+# Prompt for alerts to handle
+alertsToWatch(){
+  local dryRun="${1}"
+
+  PCE="PruningCronjobErrorSRE"
+  KNU="KubeNodeUnschedulableSRE"
+  CER="ClusterMonitoringErrorBudgetBurnSRE"
+  CEB="console-ErrorBudgetBurn"
+  AER="api-ErrorBudgetBurn"
+  UPG="UpgradeNodeUpgradeTimeoutSRE"
+  CPD="ClusterProvisioningDelay"
+
+  if [[ "${dryRun}_x" == "TRUE_x" ]]
+  then
+    echo "$PCE"
+    echo "$KNU"
+    echo "$CER"
+    echo "$CEB"
+    echo "$UPG"
+    echo "$AER"
+    echo "$CPD"
+    return
+  fi
+
+  gum choose --no-limit "$PCE" "$KNU" "$CER" "$UPG" "$AER" "$CPD" "$CEB"
+}
+
+# summarizeAlertDetailsFromAlert returns a summary of the alert details as a JSON formatted string 
+# Format {"external_id":"cluster_UID", "pd":{ "id":"pd_alert_id", "title": "pd_alert_title"}
+summarizeAlertDetailsFromAlert() {
+  local alert="${1}"
+  jq -cj '. | "{\"external_id\": \"\(.body.details.cluster_id)\", \"pd\": {\"id\": \"\(.id)\", \"title\": \"\(.summary)\"}}"' <<< "$alert"
+}
+
+# Print reparing message to console
+beginningRepairMsg() {
+  echo $(green "Beginning to repair") $(purple $1) - $(purple $2) $(green "on") $(blue $3)
+}
+
+# processAlert accepts output from summarizeAlertDetailsFromAlert and checks the alert to see if it is one of the "watched" alerts
+# If so, it executes the function with that alert name, passing the cluster id as stdin
+processAlert() {
+  local alert="${1}"
+  local dryRun="${2}"
+
+  # loop through the alert types we've selected to watch
+  for alert_type in "${ALERTS[@]}"
+  do 
+    match=$(jq -r --arg alertToWatch "${alert_type}" '. | select(.pd.title | contains($alertToWatch))' <<< "${alert}")
+
+    if [[ -z "$match" ]]
+    then
+      echo "NO MATCH"
+      # This alert is not one we're watching
+      continue
+    fi
+
+    cluster_id=$(jq -r .external_id <<< "$alert")
+    pd_alert_id=$(jq -r .pd.id <<< "$alert")
+
+    echo "Acting on PD alert $pd_alert_id"
+
+    if [[ -z "$cluster_id" ]]
+    then
+      # This is fine for the POC, but needs to be more robust in the future
+      echo "No cluster ID to work; skipping"
+      return
+    fi
+
+    # Disable errexit to allow the loop to continue if the individual repair fails
+    beginningRepairMsg "$alert_type" "$pd_alert_id" "$cluster_id"
+
+    set +o errexit
+
+    if [[ "${dryRun}_x" == "TRUE_x" ]]
+    then
+      echo "Dry Run: Would have acted on $alert_type $cluster_id"
+      set -o errexit
+      return
+    fi
+    
+    # Otherwise handle the alert
+    $alert_type <<< "$cluster_id"
+    set -o errexit
+  done
+}
+
+# Alert handler functions
+UpgradeNodeUpgradeTimeoutSRE() {
+  local cluster
+  read -r cluster
+
+  echo $(blue "Checking if the cluster is a management cluster or service cluster")
+  ocm get /api/osd_fleet_mgmt/v1/management_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")'
+  ocm get /api/osd_fleet_mgmt/v1/service_clusters | jq -r '.items[] | select(.cluster_management_reference.cluster_id == "{CLUSTER_INTERNAL_ID}")' 
+  
+  ocm backplane login "$cluster"
+  echo $(blue "Checking MUO")
+  oc get upgrade -n openshift-managed-upgrade-operator
+  
+  echo $(blue "Checking nodes")
+  oc get no -o wide | grep SchedulingDisabled
+  sleep 3
+
+  echo $(blue "Checking MCP")
+  oc get mcp
+  sleep 3
+
+  #TODO: drain node, check pdb, Special case - Twistlock, Special case - rpm-ostreed timeout
+}
+
+PruningCronjobErrorSRE() {
+  local cluster
+  read -r cluster
+
+  ocm backplane login "$cluster"
+  oc get po -n openshift-sre-pruning 
+  echo $(blue "Running the script for PruningCronjobErrorSRE alert")
+  OUTPUT=$(ocm backplane managedjob create SREP/retry-failed-pruning-cronjob|tail -2)
+  echo $(blue "Outputting the script's log")
+  job=$(awk '{print $NF}' <<< $OUTPUT)
+  sleep 3
+  ocm backplane managedjob logs $job
+  oc get po -n openshift-sre-pruning 
+}
+
+ClusterProvisioningDelay() {
+  local cluster
+  read -r cluster
+
+  osdctl cluster context "$cluster"
+  ocm backplane login "$cluster"
+  cat ~/.config/osdctl
+  echo $(blue "Running osdctl cluster cpd --cluster-id "$cluster" --profile rhcontrol")
+  osdctl cluster cpd --cluster-id "$cluster" --profile rhcontrol
+  sleep 3
+  echo "...."
+
+}
+
+KubeNodeUnschedulableSRE() {
+  local cluster
+  read -r cluster
+
+  ocm backplane login "$cluster"
+  ocm backplane context
+  echo $(blue "Running the script for KubeNodeUnschedulableSRE alert")
+  ~/ops-sop/v4/utils/kube-node-unscheduleable.sh
+
+}
+
+#console-ErrorBudgetBurn() {
+ClusterMonitoringErrorBudgetBurnSRE() {
+  local cluster
+  read -r cluster
+
+  ocm backplane login "$cluster"
+  oc get co
+}
+
+api-ErrorBudgetBurn() {
+  local cluster
+  read -r cluster
+
+  ocm backplane login "$cluster"
+  oc get co
+}
+
+console-ErrorBudgetBurn() {
+  local cluster
+  read -r cluster
+
+  echo "NOT IMPLEMENTED YET"
+  echo $cluster
+}
