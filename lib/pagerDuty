@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+pagerDutyOnCall() {
+  pd schedule oncall -n '0-SREP: Weekday Primary' --json 2>/dev/null | \
+    jq -rc '.[0].user.summary' || \
+
+  pd schedule oncall -n '0-SREP: Weekend Oncall 4x6' --json 2>/dev/null | \
+    jq -rc '.[0].user.summary'
+}
+
+pagerDutyGetIncidents() {
+  local on_call="${1}"
+  pd incident list --teams='Platform SRE'  --assignees="${on_call}" --json 2>/dev/null
+}
+
+# pagerDutyGetAlertDataFromIncident returns a raw string of PagerDuty alerts in JSON format
+pagerDutyGetAlertsFromIncident() {
+  local incident="${1}"
+  pd incident alerts -i "${incident}" --json 2>/dev/null
+}
